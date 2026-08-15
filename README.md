@@ -13,6 +13,8 @@ It works both on the desktop and as a panel popup widget.
 ## ✨ Features
 
 - **Animated pet** — Tux (default) or Tater, shown as the widget icon. The pet reacts to the chat status (idle, thinking, streaming, success, error) and waves when clicked.
+- **Draggable pet** — drag the pet anywhere within the widget; it walks (left/right) following the drag direction and stops when released.
+- **Offline status dot** — a small fixed red dot (10px) appears only while the server is offline; it fades out when the server comes online.
 - **Popup panel** — click the pet to open a `WebEngineView` popup that loads the OpenCode web UI served by `opencode serve` on localhost.
 - **No browser** — the web UI runs embedded in the popup, not in an external browser.
 - **Clean environment** — the server is spawned with a sanitized environment (desktop-app leftovers are unset) so it runs unauthenticated with the embedded web UI enabled.
@@ -81,7 +83,8 @@ opencode auth login
 KDE Plasma 6 (plasmashell)
 └── Plasmoid (QML)
     ├── compactRepresentation → PetSprite (animated pet + status dot)
-    │   └── click → wave + expand popup
+    │   ├── click → wave + expand popup
+    │   └── drag → move pet + walking animation (left/right)
     └── fullRepresentation    → WebEngineView (OpenCode web UI)
         └── loads http://127.0.0.1:<port>/  (served by `opencode serve`)
             └── spawned on-demand with clean env (no auth, web UI enabled)

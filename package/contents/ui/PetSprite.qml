@@ -49,6 +49,7 @@ Item {
     // ---- internal state ----
     property string currentAnim: "idle"
     property bool oneShot: false
+    property bool dragOverride: false // when dragging, ignore external state changes
 
     width: size
     height: size * (cellH / cellW)
@@ -104,9 +105,23 @@ Item {
         setAnimation("waving", true)
     }
 
-    // react to external state changes
-    onStateChanged: {
+    // Drag support: lock the sprite to a walking animation while the pet is
+    // being dragged, ignoring external state changes until stopDragging().
+    function startDragging(direction) {
+        dragOverride = true
+        setAnimation(direction === "right" ? "runningRight" : "runningLeft", true)
+    }
+
+    function stopDragging() {
+        dragOverride = false
         setState(state)
+    }
+
+    // react to external state changes (unless overridden by a drag)
+    onStateChanged: {
+        if (!dragOverride) {
+            setState(state)
+        }
     }
 
     Component.onCompleted: {

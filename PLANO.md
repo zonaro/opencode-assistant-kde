@@ -29,7 +29,8 @@ Widget (Plasmoid) para KDE Plasma 6 que conversa com IA usando o **opencode CLI*
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Plasmoid (QML)                                          │  │
 │  │  ├─ compactRepresentation → PetSprite (pet animado)      │  │
-│  │  │   └─ clique → wave + expand popup                     │  │
+│  │  │   ├─ clique → wave + expand popup                     │  │
+│  │  │   └─ arrastar → move o pet + animação de andar        │  │
 │  │  └─ fullRepresentation → WebEngineView (UI do opencode) │  │
 │  │      └─ carrega http://127.0.0.1:<porta>/                 │  │
 │  └───────────────────────────────────────────────────────────┘  │
@@ -118,6 +119,17 @@ Widget (Plasmoid) para KDE Plasma 6 que conversa com IA usando o **opencode CLI*
 - Spawn do servidor: `Plasma5Support.DataSource` (engine `executable`) com `env -u` para limpar vars do desktop app
 - Health check: `curl -w "%{http_code}"` a cada 3 s; estado do pet via `GET /session`
 - Pet carregado do data dir (`~/.local/share/opencode-assistant-kde/pets/<id>/`) com fallback pro pacote
+
+#### Interações do pet (compactRepresentation)
+
+| Interação | Comportamento                                                                                                   |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| **Clique** | Press + release sem movimento (>4px = arrasto). Aciona `pet.wave()` + `root.openWeb()` (abre o popup)          |
+| **Arrastar** | Move o pet livremente dentro dos limites do widget, com animação de andar (`runningRight`/`runningLeft`) seguindo a direção horizontal; ao soltar, volta ao estado atual |
+| **Dot de status** | Círculo fixo de **10px**, vermelho `#e53935` com borda branca, ancorado no canto inferior direito — **visível apenas quando offline** (opacity 0 quando online, com fade de 200ms) |
+| **Tamanho do widget** | `Layout.minimumWidth/Height` = tamanho do pet; `Layout.preferredWidth/Height` = **1.5×** o tamanho do pet (espaço para arrastar) |
+
+O pet é posicionado por `x`/`y` (não `anchors.centerIn`), centralizado no primeiro layout e limitado (clamped) aos limites do widget em redimensionamentos. O `MouseArea` cobre todo o widget, então o arrasto pode começar em qualquer lugar.
 
 **Config KConfig** (básica): porta, hostname, pet selecionado, tamanho do pet, dimensões do popup.
 

@@ -154,7 +154,6 @@ PlasmoidItem {
     }
 
     function openWeb() {
-        pet.wave()
         root.expanded = true
         if (!serverAlive && !spawnAttempted) {
             spawnServer()
@@ -187,38 +186,129 @@ PlasmoidItem {
         }
     }
 
-    // ---- compact: animated pet ----
+    // ---- compact: animated pet (draggable within the widget) ----
     compactRepresentation: Item {
         id: compactItem
-        Layout.preferredWidth: Plasmoid.configuration.petSize
-        Layout.preferredHeight: Plasmoid.configuration.petSize * (208 / 192)
+
+        // A bit bigger than the pet so there's room to drag it around.
+        Layout.minimumWidth: Plasmoid.configuration.petSize
+        Layout.minimumHeight: Plasmoid.configuration.petSize * (208 / 192)
+        Layout.preferredWidth: Plasmoid.configuration.petSize * 1.5
+        Layout.preferredHeight: Plasmoid.configuration.petSize * (208 / 192) * 1.5
+
+        // pet top-left position inside the widget
+        property real petPosX: 0
+        property real petPosY: 0
+        property bool petInitialized: false
+        property string dragDir: ""
+
+        // center the pet on first layout, clamp it on every resize
+        function handleSizeChanged() {
+            const maxX = Math.max(0, compactItem.width - pet.width)
+            const maxY = Math.max(0, compactItem.height - pet.height)
+            if (!compactItem.petInitialized && compactItem.width > 0 && compactItem.height > 0) {
+                compactItem.petInitialized = true
+                compactItem.petPosX = maxX / 2
+                compactItem.petPosY = maxY / 2
+            } else {
+                compactItem.petPosX = Math.min(compactItem.petPosX, maxX)
+                compactItem.petPosY = Math.min(compactItem.petPosY, maxY)
+            }
+        }
+        onWidthChanged: handleSizeChanged()
+        onHeightChanged: handleSizeChanged()
 
         PetSprite {
             id: pet
-            anchors.centerIn: parent
+            x: compactItem.petPosX
+            y: compactItem.petPosY
             size: Plasmoid.configuration.petSize
             source: root.petSource
             state: root.petState
         }
 
-        // status dot
+        // status dot: fixed small red dot, only visible while offline
         Rectangle {
             anchors.bottom: parent.bottom
             anchors.right: parent.right
-            width: Math.max(6, parent.width * 0.22)
-            height: width
-            radius: width / 2
-            color: root.serverAlive ? "#4caf50" : "#b0bec5"
+            width: 10
+            height: 10
+            radius: 5
+            color: "#e53935"
             border.color: "#ffffff"
             border.width: 1
-            Behavior on color { ColorAnimation { duration: 300 } }
+            opacity: root.serverAlive ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: 200 } }
         }
 
         MouseArea {
+            id: petArea
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: root.openWeb()
             cursorShape: Qt.PointingHandCursor
+
+            property bool pressedActive: false
+            property bool moved: false
+            property real pressX: 0
+            property real pressY: 0
+            property real lastX: 0
+            property real lastY: 0
+
+            onPressed: (mouse) => {
+                pressedActive = true
+                moved = false
+                pressX = mouse.x
+                pressY = mouse.y
+                lastX = mouse.x
+                lastY = mouse.y
+            }
+
+            onPositionChanged: (mouse) => {
+                if (!pressedActive) return
+                const dx = mouse.x - lastX
+                const dy = mouse.y - lastY
+                if (Math.abs(mouse.x - pressX) > 4 || Math.abs(mouse.y - pressY) > 4) {
+                    moved = true
+                }
+                const maxX = Math.max(0, compactItem.width - pet.width)
+                const maxY = Math.max(0, compactItem.height - pet.height)
+                compactItem.petPosX = Math.max(0, Math.min(maxX, compactItem.petPosX + dx))
+                compactItem.petPosY = Math.max(0, Math.min(maxY, compactItem.petPosY + dy))
+                lastX = mouse.x
+                lastY = mouse.y
+
+                // walking animation follows the horizontal drag direction
+                if (Math.abs(dx) > 0.5) {
+                    const dir = dx > 0 ? "right" : "left"
+                    if (dir !== compactItem.dragDir) {
+                        compactItem.dragDir = dir
+                        pet.startDragging(dir)
+                    }
+                }
+            }
+
+            onReleased: {
+                if (!pressedActive) return
+                pressedActive = false
+                compactItem.dragDir = ""
+                if (moved) {
+                    // it was a drag — stop walking
+                    pet.stopDragging()
+                } else {
+                    // plain click — wave and open the opencode popup
+                    pet.wave()
+                    root.openWeb()
+                }
+            }
+
+            onCanceled: {
+                if (!pressedActive) return
+                pressedActive = false
+                compactItem.dragDir = ""
+                if (moved) {
+                    pet.stopDragging()
+                }
+            }
         }
     }
 
