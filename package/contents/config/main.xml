@@ -11,15 +11,9 @@
       <min>1024</min>
       <max>65535</max>
     </entry>
-    <entry name="avatar" type="String">
-      <label>Path to the user avatar image (shown as the widget icon). Empty uses the default.</label>
-      <default></default>
-    </entry>
-    <entry name="avatarSize" type="Int">
-      <label>Avatar size in pixels (desktop mode).</label>
-      <default>48</default>
-      <min>32</min>
-      <max>256</max>
+    <entry name="hostname" type="String">
+      <label>Hostname the opencode serve server listens on.</label>
+      <default>127.0.0.1</default>
     </entry>
     <entry name="popupWidth" type="Int">
       <label>Popup chat width in pixels.</label>
@@ -34,8 +28,14 @@
       <max>2000</max>
     </entry>
     <entry name="petId" type="String">
-      <label>Identifier of the pet shown in the chat.</label>
+      <label>Identifier of the pet shown in the widget.</label>
       <default>tux</default>
+    </entry>
+    <entry name="petSize" type="Int">
+      <label>Pet sprite display size in pixels.</label>
+      <default>64</default>
+      <min>32</min>
+      <max>256</max>
     </entry>
   </group>
 </kcfg>

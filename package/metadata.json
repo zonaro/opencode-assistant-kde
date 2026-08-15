@@ -3,8 +3,8 @@
     "Id": "com.opencode.assistant",
     "Name": "OpenCode Assistant",
     "Name[pt]": "Assistente OpenCode",
-    "Description": "Chat with AI via the opencode CLI, with an animated pet",
-    "Description[pt]": "Chat com IA via CLI opencode, com pet animado",
+    "Description": "Chat with AI via the opencode CLI, with an animated pet that opens a web panel on click",
+    "Description[pt]": "Chat com IA via CLI opencode, com pet animado que abre um painel web ao clicar",
     "Icon": "applications-chat",
     "Category": "Utilities",
     "Version": "0.1",
@@ -14,7 +14,9 @@
   },
   "KPackageStructure": "Plasma/Applet",
   "X-Plasma-API-Minimum-Version": "6.0",
-  "X-Plasma-Provides": ["org.kde.plasma.multiplexer"],
+  "X-Plasma-Provides": [
+    "org.kde.plasma.multiplexer"
+  ],
   "X-Plasma-NotificationArea": "true",
   "X-Plasma-StandAloneApp": "true"
 }

@@ -4,7 +4,7 @@
   <img src="docs/images/tux.png" alt="Tux pet" width="160">
 </p>
 
-An AI chat plasmoid for **KDE Plasma 6** that talks to AI using the [opencode CLI](https://opencode.ai) installed on your machine. It ships with an animated **Tux** pet, multiple conversations, file attachments, and a full settings screen.
+An AI chat plasmoid for **KDE Plasma 6** that talks to AI using the [opencode CLI](https://opencode.ai) installed on your machine. It ships with an animated **Tux** pet (and **Tater** as an alternative), and clicking the pet opens a popup panel with the OpenCode web UI.
 
 It works both on the desktop and as a panel popup widget.
 
@@ -12,22 +12,21 @@ It works both on the desktop and as a panel popup widget.
 
 ## ✨ Features
 
-- **Tux pet** — animated desktop companion that reacts to the chat status (idle, thinking, streaming, success, error). The default pet, **Tux**, is downloaded on demand during installation.
-- **Chat** — classic conversation UI with streaming responses, a model picker, and file attachments.
-- **Multiple sessions** — create, switch, and delete conversations.
-- **Settings** — assistant name/personality, user context, per-folder permissions, memories, pet options, and a secondary agent toggle.
-- **Works everywhere** — desktop widget *and* panel popup (uses `WebEngineView`).
+- **Animated pet** — Tux (default) or Tater, shown as the widget icon. The pet reacts to the chat status (idle, thinking, streaming, success, error) and waves when clicked.
+- **Popup panel** — click the pet to open a `WebEngineView` popup that loads the OpenCode web UI served by `opencode serve` on localhost.
+- **No browser** — the web UI runs embedded in the popup, not in an external browser.
+- **Clean environment** — the server is spawned with a sanitized environment (desktop-app leftovers are unset) so it runs unauthenticated with the embedded web UI enabled.
+- **Settings** — port, hostname, pet selection, pet size, and popup dimensions.
+- **Custom pets** — a button in the settings opens the pets folder (`~/.local/share/opencode-assistant-kde/pets/`); drop any OpenPets zip there (extracted as `pet.json` + `spritesheet.webp`) and refresh the list.
 
 ---
 
 ## 🖥 Requirements
 
 - **KDE Plasma 6** (Qt 6, QtWebEngine)
-- **Node.js ≥ 20**
+- **opencode CLI** (installed automatically by the installer)
 - **curl**
 - **kpackagetool6** (part of `kpackage` and shipped with KDE Plasma 6)
-
-The installer will set up [opencode](https://opencode.ai) automatically if it is not already installed.
 
 ---
 
@@ -42,11 +41,9 @@ curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/
 What it does:
 
 1. Checks and installs **opencode CLI** if missing.
-2. Downloads the widget sources from this repository.
-3. Copies the backend and web UI to `~/.local/share/opencode-assistant-kde/`.
-4. Downloads the default **Tux** pet on demand.
-5. Installs the plasmoid with `kpackagetool6`.
-6. Restarts `plasmashell`.
+2. Downloads the default **Tux** pet to `~/.local/share/opencode-assistant-kde/pets/`.
+3. Installs the plasmoid bundle with `kpackagetool6` (pets are bundled in the package as fallbacks).
+4. Restarts `plasmashell`.
 
 After installation, add the **OpenCode Assistant** widget to your desktop or panel:
 
@@ -76,45 +73,28 @@ opencode uses several providers. Once installed, run:
 opencode auth login
 ```
 
-(Or `opencode models` to list what is available.) The first time you chat you may also be asked to grant access from inside the widget — replies flow through the same interface.
-
 ---
 
 ## 🏗 Architecture
 
 ```
 KDE Plasma 6 (plasmashell)
-├── Plasmoid (QML)
-│   ├── compactRepresentation → avatar (widget icon)
-│   └── fullRepresentation    → WebEngineView (chat UI)
-└── (hatches) Backend Node.js on 127.0.0.1:<port>
-    ├── spawns / manages  `opencode serve`  (port 4096)
-    ├── serves the chat UI  (http://127.0.0.1:<port>/)
-    ├── proxies REST + SSE  (no CORS issues)
-    ├── manages configuration & memories
-    └── manages pets (state → animation, on-demand download)
-        └── opencode serve (headless)
-            ├── POST /session
-            ├── POST /session/:id/message
-            ├── GET  /event       (SSE)
-            └── POST /session/:id/permissions/:id
+└── Plasmoid (QML)
+    ├── compactRepresentation → PetSprite (animated pet + status dot)
+    │   └── click → wave + expand popup
+    └── fullRepresentation    → WebEngineView (OpenCode web UI)
+        └── loads http://127.0.0.1:<port>/  (served by `opencode serve`)
+            └── spawned on-demand with clean env (no auth, web UI enabled)
 ```
 
-- **Backend**: pure Node.js, zero external dependencies (`node:http` only).
-- **UI**: plain HTML/CSS/JS served by the backend — no CORS, no `file://` restrictions.
-- **Pets**: OpenPets format (`pet.json` + `spritesheet.webp`, 8×9 atlas). The default **Tux** is fetched from `https://zip.openpets.dev/pets/tux-de2f300f/tux.zip` on demand; **Tater** is bundled offline as a fallback.
-
-Config is stored in `~/.local/share/opencode-assistant-kde/config.json`.
+- **Plasmoid**: pure QML (`main.qml` + `PetSprite.qml`). No Node.js backend.
+- **Server**: `opencode serve --hostname 127.0.0.1 --port <port>` — spawned on-demand by the plasmoid with `env -u` to unset desktop-app leftovers (`OPENCODE_SERVER_PASSWORD`, `OPENCODE_DISABLE_EMBEDDED_WEB_UI`, `OPENCODE_CLIENT`, `XDG_STATE_HOME`).
+- **Pets**: OpenPets format (`pet.json` + `spritesheet.webp`, 8×9 atlas, 192×208 cells). Bundled in `package/contents/ui/pets/` (Tux + Tater).
+- **State polling**: the plasmoid polls `GET /session` every 3 s to detect active sessions and animate the pet accordingly.
 
 ---
 
 ## 🧪 Development
-
-Run the backend locally (serves the web UI at `http://127.0.0.1:3171/`):
-
-```bash
-node backend/index.js
-```
 
 Test everything:
 
