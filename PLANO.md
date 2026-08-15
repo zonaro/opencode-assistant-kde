@@ -267,3 +267,15 @@ Responsabilidades:
 - opencode server/API: opencode.ai/docs/server/ · SDK: opencode.ai/docs/sdk/
 - opencode CLI: opencode.ai/docs/cli/ · Permissões: opencode.ai/docs/permissions/ · Regras/AGENTS.md: opencode.ai/docs/rules/ · Agentes: opencode.ai/docs/agents/
 - Pets: learn.chatgpt.com/docs/pets · github.com/openai/codex (codex-rs/tui/src/pets/) · github.com/alvinunreal/openpets · github.com/FroeMic/codex-pets-web · github.com/backnotprop/codex-pets-react
+---
+
+## 9. Distribuição
+
+- **Repositório**: https://github.com/zonaro/opencode-assistant-kde (público, MIT)
+- **Instalação via curl**: `curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash`
+  - Instala o opencode CLI (via `https://opencode.ai/install`) se ausente
+  - Baixa as fontes do tarball da branch `main`
+  - Copia backend + webui para `~/.local/share/opencode-assistant-kde/`
+  - Baixa o pet padrão **Tux** (zip.openpets.dev) sob demanda
+  - Instala o plasmoid via `kpackagetool6` e reinicia `plasmashell`
+- **Site /docs (GitHub Pages)**: https://zonaro.github.io/opencode-assistant-kde/ — i18n PT/EN/ES (detecção automática de idioma + `/pt/`, `/en/`, `/es/`)
