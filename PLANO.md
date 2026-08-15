@@ -28,14 +28,14 @@ Widget (Plasmoid) para KDE Plasma 6 que conversa com IA usando o **opencode CLI*
 │                     KDE Plasma 6 (plasmashell)                  │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Plasmoid (QML)                                          │  │
-│  │  ├─ compactRepresentation → PetSprite (pet animado)      │  │
+│  │  ├─ fullRepresentation → PetSprite (pet animado)         │  │
 │  │  │   ├─ clique no pet → wave + abre popup               │  │
 │  │  │   ├─ clique em área vazia → pet anda até o ponto     │  │
 │  │  │   ├─ arrastar → move o pet + animação de andar       │  │
 │  │  │   ├─ hover → animação de pular                       │  │
 │  │  │   └─ scroll → aumenta/diminui o tamanho do pet       │  │
 │  │  └─ PlasmaCore.Dialog → WebEngineView (UI do opencode) │  │
-│  │      ├─ ancorado na cabeça do pet (segue o pet)        │  │
+│  │      ├─ ao lado do pet, sem cobri-lo (segue o pet)     │  │
 │  │      └─ redimensionável (alça no canto inferior direito)│  │
 │  └───────────────────────────────────────────────────────────┘  │
 └──────────────────────────────┬──────────────────────────────────┘
@@ -118,28 +118,29 @@ Widget (Plasmoid) para KDE Plasma 6 que conversa com IA usando o **opencode CLI*
 ```
 
 **`main.qml`** — raiz `PlasmoidItem`:
-- `compactRepresentation`: `PetSprite` (pet animado) + dot de status — clicável, aciona `openWeb()` (wave + expand)
-- `fullRepresentation`: `WebEngineView` carregando `http://127.0.0.1:<porta>/` (UI web do opencode)
+- `preferredRepresentation: fullRepresentation` — o pet é o conteúdo próprio do applet. **Não use `compactRepresentation`**: o Plasma não a instancia num applet de área de trabalho, e o widget fica vazio
+- Conteúdo do applet: `PetSprite` (pet animado) + dot de status — clicável, aciona `openWeb()`
+- Popup: `PlasmaCore.Dialog` com `WebEngineView` carregando `http://127.0.0.1:<porta>/` (UI web do opencode)
 - Spawn do servidor: `Plasma5Support.DataSource` (engine `executable`) com `env -u` para limpar vars do desktop app
 - Health check: `curl -w "%{http_code}"` a cada 3 s; estado do pet via `GET /session`
 - Pet carregado do data dir (`~/.local/share/opencode-assistant-kde/pets/<id>/`) com fallback pro pacote
 
-#### Interações do pet (compactRepresentation)
+#### Interações do pet
 
-| Interação             | Comportamento                                                                                                                                                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Clique no pet**     | Press + release sem movimento (>4px = arrasto) sobre o pet. Aciona `pet.wave()` + `root.openWeb()` (abre o popup)                                                                  |
-| **Clique em área vazia** | Press + release sem movimento fora do pet. O pet **anda até o ponto clicado** (animação `runningRight`/`runningLeft` conforme a direção) e para ao chegar                        |
-| **Arrastar**          | Move o pet livremente dentro dos limites do widget, com animação de andar (`runningRight`/`runningLeft`) seguindo a direção horizontal; ao soltar, volta ao estado atual           |
-| **Hover**             | Enquanto o ponteiro está sobre o pet, ele fica **pulando** (`jumping`); ao sair, volta ao estado atual                                                                             |
-| **Scroll**            | Roda do mouse sobre o widget: **scroll up aumenta** o tamanho do pet, **scroll down diminui** (32–256 px, passo 8)                                                                 |
-| **Offline**           | Quando o servidor está offline, o pet troca para a **animação de erro** (`failed`); volta ao normal quando online                                                                  |
-| **Dot de status**     | Círculo fixo de **10px**, vermelho `#e53935` com borda branca, ancorado no canto inferior direito — **visível apenas quando offline** (opacity 0 quando online, com fade de 200ms) |
-| **Tamanho do widget** | `Layout.minimumWidth/Height` = tamanho do pet; `Layout.preferredWidth/Height` = **1.5×** o tamanho do pet (espaço para arrastar)                                                   |
+| Interação                | Comportamento                                                                                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Clique no pet**        | Press + release sem movimento (>4px = arrasto) sobre o pet. Aciona `pet.wave()` + `root.openWeb()` (abre o popup)                                                                  |
+| **Clique em área vazia** | Press + release sem movimento fora do pet. O pet **anda até o ponto clicado** (animação `runningRight`/`runningLeft` conforme a direção) e só para ao chegar — o tick da caminhada reafirma a animação a cada frame, então sair com o ponteiro do widget não a interrompe |
+| **Arrastar**             | Move o pet livremente dentro dos limites do widget, com animação de andar (`runningRight`/`runningLeft`) seguindo a direção horizontal; ao soltar, volta ao estado atual           |
+| **Hover**                | Enquanto o ponteiro está sobre o pet, ele fica **pulando** (`jumping`); ao sair, volta ao estado atual                                                                             |
+| **Scroll**               | Roda do mouse sobre o widget: **scroll up aumenta** o tamanho do pet, **scroll down diminui** (32–256 px, passo 8)                                                                 |
+| **Offline**              | Quando o servidor está offline, o pet troca para a **animação de erro** (`failed`); volta ao normal quando online                                                                  |
+| **Dot de status**        | Círculo fixo de **10px**, vermelho `#e53935` com borda branca, ancorado no canto inferior direito — **visível apenas quando offline** (opacity 0 quando online, com fade de 200ms) |
+| **Tamanho do widget**    | `Layout.minimumWidth/Height` = tamanho do pet; `Layout.preferredWidth/Height` = **1.5×** o tamanho do pet (espaço para arrastar)                                                   |
 
 O pet é posicionado por `x`/`y` (não `anchors.centerIn`), centralizado no primeiro layout e limitado (clamped) aos limites do widget em redimensionamentos. O `MouseArea` cobre todo o widget, então o arrasto pode começar em qualquer lugar.
 
-**Popup (PlasmaCore.Dialog)**: abre **perto da cabeça do pet** (estilo balão de fala, acima da cabeça, com clamp à tela) e **segue o pet** quando ele é arrastado ou anda. É **redimensionável** pela alça no canto inferior direito (largura mín. 320, altura mín. 240) e o tamanho é persistido em `popupWidth`/`popupHeight`. Fecha pelo botão ✕ no cabeçalho ou clicando no pet.
+**Popup (PlasmaCore.Dialog)**: abre **perto do pet sem cobri-lo** e **segue o pet** quando ele é arrastado ou anda. A colocação tenta, nesta ordem: (1) acima da cabeça, centralizado (estilo balão de fala); (2) abaixo dos pés; (3) à direita e depois à esquerda, centralizado verticalmente no pet; (4) só então sobrepõe, quando não há espaço na tela em lugar nenhum. É **redimensionável** pela alça no canto inferior direito (largura mín. 320, altura mín. 240) e o tamanho é persistido em `popupWidth`/`popupHeight`. Fecha pelo botão ✕ no cabeçalho ou clicando no pet.
 
 **Config KConfig**: porta, hostname, pet selecionado, tamanho do pet, **velocidade da animação (FPS)**, dimensões do popup.
 

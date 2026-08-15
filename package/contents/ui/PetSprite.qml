@@ -16,9 +16,11 @@ Item {
     property int fps: 10            // animation speed (configurable via petFps)
 
     // ---- public API ----
+    // NOTE: the status property is called petState, not state: Item already has a
+    // `state` property (QML states) and shadowing it makes the binding ambiguous.
     property url source: ""          // spritesheet URL (local file)
     property int size: 96            // display width in px (height auto-scaled)
-    property string state: "idle"    // idle | thinking | streaming | waiting | success | error | waving
+    property string petState: "idle" // idle | thinking | streaming | waiting | success | error | waving
     property bool reducedMotion: false
 
     // ---- animation table: name -> { row, frames } ----
@@ -73,7 +75,7 @@ Item {
         onFinished: {
             if (root.oneShot) {
                 // one-shot animation completed — return to the current state
-                Qt.callLater(root.setState, root.state)
+                Qt.callLater(root.setState, root.petState)
             }
         }
     }
@@ -83,12 +85,14 @@ Item {
         return name === "waving" || name === "jumping" || name === "failed"
     }
 
-    function setAnimation(name, force) {
+    // loop: undefined = decide from isOneShot(); true = force looping (used by
+    // setState, since a status animation must keep playing indefinitely).
+    function setAnimation(name, force, loop) {
         if (!force && currentAnim === name) return
         if (reducedMotion) name = "idle"
         const a = anims[name] || anims.idle
         currentAnim = name
-        oneShot = isOneShot(name)
+        oneShot = (loop === undefined) ? isOneShot(name) : !loop
         sprite.frameY = a.row * cellH
         sprite.frameCount = a.frames
         sprite.loops = oneShot ? 1 : Animation.Infinite
@@ -97,9 +101,14 @@ Item {
         sprite.running = true
     }
 
+    // Status animations always loop: states like error ("failed") or success
+    // ("jumping") map to animations that are one-shot when triggered as an event,
+    // but as a *state* they have to keep playing — otherwise the sprite stops on
+    // the first frame and the pet freezes.
     function setState(stateName) {
         const anim = stateMap[stateName] || "idle"
-        setAnimation(anim)
+        // force a restart when the sprite is stopped (a previous one-shot ended)
+        setAnimation(anim, !sprite.running, true)
     }
 
     function wave() {
@@ -115,7 +124,9 @@ Item {
 
     function stopDragging() {
         dragOverride = false
-        setState(state)
+        if (!hoverOverride) {
+            setState(petState)
+        }
     }
 
     // Hover support: while the pointer is over the pet it keeps jumping.
@@ -125,19 +136,23 @@ Item {
         sprite.loops = Animation.Infinite // keep jumping while hovering
     }
 
+    // The pointer leaving the widget must not interrupt a walk or a drag —
+    // otherwise the pet slides to its target playing the idle animation.
     function stopHover() {
         hoverOverride = false
-        setState(state)
+        if (!dragOverride) {
+            setState(petState)
+        }
     }
 
     // react to external state changes (unless overridden by a drag or hover)
-    onStateChanged: {
+    onPetStateChanged: {
         if (!dragOverride && !hoverOverride) {
-            setState(state)
+            setState(petState)
         }
     }
 
     Component.onCompleted: {
-        setAnimation("idle")
+        setState(petState)
     }
 }

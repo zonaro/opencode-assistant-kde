@@ -10,8 +10,17 @@ import org.kde.plasma.plasmoid
 PlasmoidItem {
     id: root
 
-    preferredRepresentation: compactRepresentation
+    // The pet is the applet's own content (full representation): Plasma never
+    // instantiates a compactRepresentation for an applet sitting on the desktop,
+    // so putting the pet there left the widget empty.
+    preferredRepresentation: fullRepresentation
     Plasmoid.backgroundHints: PlasmaCore.Types.ShadowBackground
+
+    // A bit bigger than the pet so there's room to drag it around.
+    Layout.minimumWidth: Plasmoid.configuration.petSize
+    Layout.minimumHeight: Plasmoid.configuration.petSize * (208 / 192)
+    Layout.preferredWidth: Plasmoid.configuration.petSize * 1.5
+    Layout.preferredHeight: Plasmoid.configuration.petSize * (208 / 192) * 1.5
 
     // ---- config ----
     readonly property string serverHost: Plasmoid.configuration.hostname
@@ -161,24 +170,54 @@ PlasmoidItem {
         }
     }
 
-    // position the chat dialog near the pet's head (screen coordinates)
+    // Place the chat dialog next to the pet without covering it: above the head
+    // first (speech bubble), then below its feet, then to either side. Only when
+    // none of those fit on screen does it fall back to overlapping the pet.
     function positionDialogAtPet() {
-        const head = compactItem.petHeadGlobal()
+        if (!pet) return
+
+        const gap = 8
         const scr = root.screenGeometry
         // dialog window size = content + themed margins (dialog may be hidden,
         // so chatDialog.width isn't synced yet — compute it explicitly)
         const m = chatDialog.margins
-        const w = chatContent.width + m.left + m.right
-        const h = chatContent.height + m.top + m.bottom
-        let x = Math.round(head.x - w / 2)
-        let y = Math.round(head.y - h - 8) // above the head, like a speech bubble
-        x = Math.max(scr.x + 4, Math.min(x, scr.x + scr.width - w - 4))
-        if (y < scr.y + 4) {
-            y = Math.round(head.y + 8) // not enough room above — open below
+        const w = chatContent.width + (m ? m.left + m.right : 0)
+        const h = chatContent.height + (m ? m.top + m.bottom : 0)
+
+        // pet rectangle in screen coordinates
+        const tl = pet.mapToGlobal(0, 0)
+        const petW = pet.width
+        const petH = pet.height
+
+        const minX = scr.x + 4
+        const maxX = scr.x + scr.width - w - 4
+        const minY = scr.y + 4
+        const maxY = scr.y + scr.height - h - 4
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi))
+
+        // centred on the head, above the pet
+        let x = clamp(Math.round(tl.x + petW / 2 - w / 2), minX, maxX)
+        let y = Math.round(tl.y - h - gap)
+
+        if (y < minY) {
+            const below = Math.round(tl.y + petH + gap)
+            if (below <= maxY) {
+                y = below // no room above — hang it under the pet's feet
+            } else {
+                // no room above or below — put it beside the pet instead
+                const right = Math.round(tl.x + petW + gap)
+                const left = Math.round(tl.x - w - gap)
+                if (right <= maxX) {
+                    x = right
+                } else if (left >= minX) {
+                    x = left
+                }
+                y = clamp(Math.round(tl.y + petH / 2 - h / 2), minY, maxY)
+            }
         }
-        y = Math.max(scr.y + 4, Math.min(y, scr.y + scr.height - h - 4))
+
         chatDialog.x = x
-        chatDialog.y = y
+        chatDialog.y = clamp(y, minY, maxY)
     }
 
     // ---- lifecycle ----
@@ -201,15 +240,10 @@ PlasmoidItem {
         }
     }
 
-    // ---- compact: animated pet (draggable within the widget) ----
-    compactRepresentation: Item {
+    // ---- animated pet (draggable within the widget) ----
+    Item {
         id: compactItem
-
-        // A bit bigger than the pet so there's room to drag it around.
-        Layout.minimumWidth: Plasmoid.configuration.petSize
-        Layout.minimumHeight: Plasmoid.configuration.petSize * (208 / 192)
-        Layout.preferredWidth: Plasmoid.configuration.petSize * 1.5
-        Layout.preferredHeight: Plasmoid.configuration.petSize * (208 / 192) * 1.5
+        anchors.fill: parent
 
         // pet top-left position inside the widget
         property real petPosX: 0
@@ -239,16 +273,17 @@ PlasmoidItem {
                 }
                 compactItem.petPosX += (dx / dist) * speed
                 compactItem.petPosY += (dy / dist) * speed
-                // walking animation follows the horizontal direction
-                if (Math.abs(dx) > 0.5) {
-                    const dir = dx > 0 ? "right" : "left"
-                    if (dir !== compactItem.dragDir) {
-                        compactItem.dragDir = dir
-                        pet.startDragging(dir)
-                    }
+                // Walking animation follows the horizontal direction. Re-assert it
+                // when something else took the sprite over (hover, status poll), so
+                // the pet keeps walking until it actually arrives.
+                const dir = dx > 0 ? "right" : "left"
+                const wantAnim = dir === "right" ? "runningRight" : "runningLeft"
+                if (dir !== compactItem.dragDir || pet.currentAnim !== wantAnim) {
+                    compactItem.dragDir = dir
+                    pet.startDragging(dir)
                 }
                 // keep the popup anchored while the pet walks
-                if (root.chatDialog.visible) {
+                if (chatDialog.visible) {
                     root.positionDialogAtPet()
                 }
             }
@@ -279,6 +314,9 @@ PlasmoidItem {
 
         // center the pet on first layout, clamp it on every resize
         function handleSizeChanged() {
+            // Plasma incubates representations asynchronously, so the widget can
+            // already be sized while the sprite has not been created yet.
+            if (!pet) return
             const maxX = Math.max(0, compactItem.width - pet.width)
             const maxY = Math.max(0, compactItem.height - pet.height)
             if (!compactItem.petInitialized && compactItem.width > 0 && compactItem.height > 0) {
@@ -291,23 +329,34 @@ PlasmoidItem {
             }
         }
 
-        // pet head position in screen coordinates (anchors the chat popup)
-        function petHeadGlobal() {
-            const p = pet.mapToGlobal(pet.width / 2, 0)
-            return Qt.point(p.x, p.y)
-        }
-
         onWidthChanged: handleSizeChanged()
         onHeightChanged: handleSizeChanged()
+
+        // the sprite may be created after the widget is already sized
+        Component.onCompleted: handleSizeChanged()
 
         PetSprite {
             id: pet
             x: compactItem.petPosX
             y: compactItem.petPosY
-            size: Plasmoid.configuration.petSize
+
+            // Never let the sprite grow past the widget: on the desktop the applet
+            // keeps its stored geometry, so a pet enlarged with the scroll wheel
+            // would be drawn outside the widget bounds (and clipped away).
+            size: {
+                const want = Plasmoid.configuration.petSize
+                const w = compactItem.width
+                const h = compactItem.height
+                if (w <= 0 || h <= 0) return want
+                return Math.max(16, Math.min(want, Math.floor(w), Math.floor(h * 192 / 208)))
+            }
             fps: Plasmoid.configuration.petFps
             source: root.petSource
-            state: root.petState
+            petState: root.petState
+
+            // resizing the pet (scroll wheel) can push it outside the widget
+            onWidthChanged: compactItem.handleSizeChanged()
+            onHeightChanged: compactItem.handleSizeChanged()
         }
 
         // status dot: fixed small red dot, only visible while offline
@@ -382,14 +431,15 @@ PlasmoidItem {
                 lastY = mouse.y
 
                 // keep the popup anchored to the pet's head while dragging
-                if (root.chatDialog.visible) {
+                if (chatDialog.visible) {
                     root.positionDialogAtPet()
                 }
 
                 // walking animation follows the horizontal drag direction
                 if (Math.abs(dx) > 0.5) {
                     const dir = dx > 0 ? "right" : "left"
-                    if (dir !== compactItem.dragDir) {
+                    const wantAnim = dir === "right" ? "runningRight" : "runningLeft"
+                    if (dir !== compactItem.dragDir || pet.currentAnim !== wantAnim) {
                         compactItem.dragDir = dir
                         pet.startDragging(dir)
                     }
@@ -410,8 +460,8 @@ PlasmoidItem {
                     if (onPet) {
                         // click on the pet — wave and toggle the opencode popup
                         pet.wave()
-                        if (root.chatDialog.visible) {
-                            root.chatDialog.visible = false
+                        if (chatDialog.visible) {
+                            chatDialog.visible = false
                         } else {
                             root.openWeb()
                         }
