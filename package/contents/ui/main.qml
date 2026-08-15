@@ -154,10 +154,31 @@ PlasmoidItem {
     }
 
     function openWeb() {
-        root.expanded = true
+        positionDialogAtPet()
+        chatDialog.visible = true
         if (!serverAlive && !spawnAttempted) {
             spawnServer()
         }
+    }
+
+    // position the chat dialog near the pet's head (screen coordinates)
+    function positionDialogAtPet() {
+        const head = compactItem.petHeadGlobal()
+        const scr = root.screenGeometry
+        // dialog window size = content + themed margins (dialog may be hidden,
+        // so chatDialog.width isn't synced yet — compute it explicitly)
+        const m = chatDialog.margins
+        const w = chatContent.width + m.left + m.right
+        const h = chatContent.height + m.top + m.bottom
+        let x = Math.round(head.x - w / 2)
+        let y = Math.round(head.y - h - 8) // above the head, like a speech bubble
+        x = Math.max(scr.x + 4, Math.min(x, scr.x + scr.width - w - 4))
+        if (y < scr.y + 4) {
+            y = Math.round(head.y + 8) // not enough room above — open below
+        }
+        y = Math.max(scr.y + 4, Math.min(y, scr.y + scr.height - h - 4))
+        chatDialog.x = x
+        chatDialog.y = y
     }
 
     // ---- lifecycle ----
@@ -171,18 +192,12 @@ PlasmoidItem {
         stateTimer.stop()
     }
 
-    onExpandedChanged: {
-        if (root.expanded && !serverAlive && !spawnAttempted) {
-            spawnServer()
-        }
-    }
-
     onServerAliveChanged: {
         if (serverAlive) {
             stateTimer.start()
         } else {
             stateTimer.stop()
-            root.petState = "idle"
+            root.petState = "error"
         }
     }
 
@@ -202,6 +217,66 @@ PlasmoidItem {
         property bool petInitialized: false
         property string dragDir: ""
 
+        // walking to a clicked spot
+        property bool walking: false
+        property real walkTargetX: 0
+        property real walkTargetY: 0
+
+        Timer {
+            id: walkTimer
+            interval: 30
+            repeat: true
+            onTriggered: {
+                const dx = compactItem.walkTargetX - compactItem.petPosX
+                const dy = compactItem.walkTargetY - compactItem.petPosY
+                const dist = Math.sqrt(dx * dx + dy * dy)
+                const speed = 3 // px per tick
+                if (dist <= speed) {
+                    compactItem.petPosX = compactItem.walkTargetX
+                    compactItem.petPosY = compactItem.walkTargetY
+                    compactItem.stopWalking()
+                    return
+                }
+                compactItem.petPosX += (dx / dist) * speed
+                compactItem.petPosY += (dy / dist) * speed
+                // walking animation follows the horizontal direction
+                if (Math.abs(dx) > 0.5) {
+                    const dir = dx > 0 ? "right" : "left"
+                    if (dir !== compactItem.dragDir) {
+                        compactItem.dragDir = dir
+                        pet.startDragging(dir)
+                    }
+                }
+                // keep the popup anchored while the pet walks
+                if (root.chatDialog.visible) {
+                    root.positionDialogAtPet()
+                }
+            }
+        }
+
+        // make the pet walk to a widget-local position (centered on the click)
+        function walkTo(x, y) {
+            const maxX = Math.max(0, compactItem.width - pet.width)
+            const maxY = Math.max(0, compactItem.height - pet.height)
+            compactItem.walkTargetX = Math.max(0, Math.min(maxX, x - pet.width / 2))
+            compactItem.walkTargetY = Math.max(0, Math.min(maxY, y - pet.height / 2))
+            compactItem.walking = true
+            walkTimer.start()
+        }
+
+        function stopWalking() {
+            compactItem.walking = false
+            walkTimer.stop()
+            compactItem.dragDir = ""
+            pet.stopDragging()
+            // if the pointer ended up over the pet (and we're not mid-press), let it jump
+            if (!petArea.pressedActive && petArea.containsMouse &&
+                petArea.mouseX >= pet.x && petArea.mouseX <= pet.x + pet.width &&
+                petArea.mouseY >= pet.y && petArea.mouseY <= pet.y + pet.height) {
+                pet.startHover()
+            }
+        }
+
         // center the pet on first layout, clamp it on every resize
         function handleSizeChanged() {
             const maxX = Math.max(0, compactItem.width - pet.width)
@@ -215,6 +290,13 @@ PlasmoidItem {
                 compactItem.petPosY = Math.min(compactItem.petPosY, maxY)
             }
         }
+
+        // pet head position in screen coordinates (anchors the chat popup)
+        function petHeadGlobal() {
+            const p = pet.mapToGlobal(pet.width / 2, 0)
+            return Qt.point(p.x, p.y)
+        }
+
         onWidthChanged: handleSizeChanged()
         onHeightChanged: handleSizeChanged()
 
@@ -223,6 +305,7 @@ PlasmoidItem {
             x: compactItem.petPosX
             y: compactItem.petPosY
             size: Plasmoid.configuration.petSize
+            fps: Plasmoid.configuration.petFps
             source: root.petSource
             state: root.petState
         }
@@ -261,6 +344,27 @@ PlasmoidItem {
                 pressY = mouse.y
                 lastX = mouse.x
                 lastY = mouse.y
+                // stop the hover jump and any walk in progress
+                pet.stopHover()
+                compactItem.stopWalking()
+            }
+
+            onEntered: {
+                if (!pressedActive && !compactItem.walking) {
+                    pet.startHover()
+                }
+            }
+
+            onExited: {
+                pet.stopHover()
+            }
+
+            onWheel: (wheel) => {
+                // scroll up = bigger pet, scroll down = smaller pet
+                const step = 8
+                const delta = wheel.angleDelta.y > 0 ? step : -step
+                const newSize = Math.max(32, Math.min(256, Plasmoid.configuration.petSize + delta))
+                Plasmoid.configuration.petSize = newSize
             }
 
             onPositionChanged: (mouse) => {
@@ -277,6 +381,11 @@ PlasmoidItem {
                 lastX = mouse.x
                 lastY = mouse.y
 
+                // keep the popup anchored to the pet's head while dragging
+                if (root.chatDialog.visible) {
+                    root.positionDialogAtPet()
+                }
+
                 // walking animation follows the horizontal drag direction
                 if (Math.abs(dx) > 0.5) {
                     const dir = dx > 0 ? "right" : "left"
@@ -287,7 +396,7 @@ PlasmoidItem {
                 }
             }
 
-            onReleased: {
+            onReleased: (mouse) => {
                 if (!pressedActive) return
                 pressedActive = false
                 compactItem.dragDir = ""
@@ -295,9 +404,21 @@ PlasmoidItem {
                     // it was a drag — stop walking
                     pet.stopDragging()
                 } else {
-                    // plain click — wave and open the opencode popup
-                    pet.wave()
-                    root.openWeb()
+                    // plain click — pet or empty area?
+                    const onPet = mouse.x >= pet.x && mouse.x <= pet.x + pet.width &&
+                                  mouse.y >= pet.y && mouse.y <= pet.y + pet.height
+                    if (onPet) {
+                        // click on the pet — wave and toggle the opencode popup
+                        pet.wave()
+                        if (root.chatDialog.visible) {
+                            root.chatDialog.visible = false
+                        } else {
+                            root.openWeb()
+                        }
+                    } else {
+                        // click on empty area — the pet walks there
+                        compactItem.walkTo(mouse.x, mouse.y)
+                    }
                 }
             }
 
@@ -312,51 +433,168 @@ PlasmoidItem {
         }
     }
 
-    // ---- full: opencode web UI ----
-    fullRepresentation: Item {
-        id: fullItem
-        Layout.preferredWidth: Plasmoid.configuration.popupWidth
-        Layout.preferredHeight: Plasmoid.configuration.popupHeight
+    // ---- chat popup: custom dialog anchored to the pet's head ----
+    PlasmaCore.Dialog {
+        id: chatDialog
+        location: PlasmaCore.Types.Floating
+        type: PlasmaCore.Dialog.AppletPopup
+        hideOnWindowDeactivate: false
+        backgroundHints: PlasmaCore.Dialog.SolidBackground
+        visible: false
 
-        WebEngineView {
-            id: webView
-            anchors.fill: parent
-            url: root.serverAlive ? root.serverUrl : "about:blank"
-            visible: root.serverAlive
-            backgroundColor: "#1e1e2e"
+        mainItem: Item {
+            id: chatContent
+            width: Plasmoid.configuration.popupWidth
+            height: Plasmoid.configuration.popupHeight
+            clip: true
 
-            onNewWindowRequested: (request) => {
-                Qt.openUrlExternally(request.url)
+            // slim header: title + status + close
+            Rectangle {
+                id: headerBar
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 34
+                color: "#181825"
+                z: 30
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 6
+                    spacing: 8
+
+                    Text {
+                        text: "OpenCode"
+                        color: "#cdd6f4"
+                        font.pixelSize: 13
+                        font.bold: true
+                        Layout.fillWidth: true
+                    }
+
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: root.serverAlive ? "#a6e3a1" : "#f38ba8"
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    Rectangle {
+                        width: 24
+                        height: 24
+                        radius: 4
+                        color: "#00000000"
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "✕"
+                            color: "#cdd6f4"
+                            font.pixelSize: 12
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: chatDialog.visible = false
+                            onEntered: parent.color = "#313244"
+                            onExited: parent.color = "#00000000"
+                        }
+                    }
+                }
             }
-        }
 
-        // loading overlay
-        Rectangle {
-            anchors.fill: parent
-            visible: !root.serverAlive
-            color: "#1e1e2e"
-            z: 10
+            // opencode web UI
+            WebEngineView {
+                id: webView
+                anchors.top: headerBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                url: root.serverAlive ? root.serverUrl : "about:blank"
+                visible: root.serverAlive
+                backgroundColor: "#1e1e2e"
 
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: 12
-
-                Text {
-                    text: "Conectando ao OpenCode..."
-                    color: "#ffffff"
-                    font.pixelSize: 16
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
+                onNewWindowRequested: (request) => {
+                    Qt.openUrlExternally(request.url)
                 }
-                Text {
-                    text: "Iniciando o servidor..."
-                    color: "#a0a0b8"
-                    font.pixelSize: 13
-                    Layout.alignment: Qt.AlignHCenter
+            }
+
+            // loading overlay
+            Rectangle {
+                anchors.top: headerBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                visible: !root.serverAlive
+                color: "#1e1e2e"
+                z: 10
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        text: "Conectando ao OpenCode..."
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                        font.bold: true
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                    Text {
+                        text: "Iniciando o servidor..."
+                        color: "#a0a0b8"
+                        font.pixelSize: 13
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                    BusyIndicator {
+                        running: true
+                        Layout.alignment: Qt.AlignHCenter
+                    }
                 }
-                BusyIndicator {
-                    running: true
-                    Layout.alignment: Qt.AlignHCenter
+            }
+
+            // resize handle (bottom-right corner)
+            MouseArea {
+                id: resizeHandle
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                width: 28
+                height: 28
+                cursorShape: Qt.SizeFDiagCursor
+                z: 40
+
+                property bool resizing: false
+                property real startW: 0
+                property real startH: 0
+                property real startGX: 0
+                property real startGY: 0
+
+                onPressed: (mouse) => {
+                    resizing = true
+                    startW = chatContent.width
+                    startH = chatContent.height
+                    startGX = mouse.globalX
+                    startGY = mouse.globalY
+                }
+                onPositionChanged: (mouse) => {
+                    if (!resizing) return
+                    chatContent.width = Math.max(320, startW + (mouse.globalX - startGX))
+                    chatContent.height = Math.max(240, startH + (mouse.globalY - startGY))
+                }
+                onReleased: {
+                    resizing = false
+                    Plasmoid.configuration.popupWidth = Math.round(chatContent.width)
+                    Plasmoid.configuration.popupHeight = Math.round(chatContent.height)
+                }
+
+                // grip indicator
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    width: 10
+                    height: 10
+                    color: "#66ffffff"
                 }
             }
         }

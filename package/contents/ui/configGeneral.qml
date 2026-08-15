@@ -15,6 +15,7 @@ KCM.SimpleKCM {
     property alias cfg_popupHeight: spinPopupHeight.value
     property alias cfg_petId: page.selectedPet
     property alias cfg_petSize: spinPetSize.value
+    property alias cfg_petFps: spinPetFps.value
 
     property string selectedPet: "tux"
 
@@ -151,6 +152,17 @@ KCM.SimpleKCM {
                 from: 32
                 to: 256
                 stepSize: 8
+            }
+        }
+
+        RowLayout {
+            Kirigami.FormData.label: i18n("Velocidade da animação (FPS):")
+
+            QQC2.SpinBox {
+                id: spinPetFps
+                from: 1
+                to: 30
+                stepSize: 1
             }
         }
     }

@@ -13,11 +13,11 @@ for f in "$PKG/contents/ui/main.qml" "$PKG/contents/ui/PetSprite.qml" "$PKG/cont
   [ -f "$f" ] || { echo "    FALTA: $f"; exit 1; }
 done
 echo "    arquivos QML/XML: OK"
-for pet in tux tater; do
+for pet in tux tater lobby; do
   [ -f "$PKG/contents/ui/pets/$pet/spritesheet.webp" ] || { echo "    FALTA: spritesheet $pet"; exit 1; }
   [ -f "$PKG/contents/ui/pets/$pet/pet.json" ] || { echo "    FALTA: pet.json $pet"; exit 1; }
 done
-echo "    pets (tux, tater): OK"
+echo "    pets (tux, tater, lobby): OK"
 
 echo "==> 2/4 Validando sintaxe QML (qmllint)"
 if command -v qmllint >/dev/null 2>&1; then

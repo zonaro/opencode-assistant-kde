@@ -13,7 +13,7 @@ Item {
     // ---- atlas constants (OpenPets) ----
     readonly property int cellW: 192
     readonly property int cellH: 208
-    readonly property int fps: 10
+    property int fps: 10            // animation speed (configurable via petFps)
 
     // ---- public API ----
     property url source: ""          // spritesheet URL (local file)
@@ -50,6 +50,7 @@ Item {
     property string currentAnim: "idle"
     property bool oneShot: false
     property bool dragOverride: false // when dragging, ignore external state changes
+    property bool hoverOverride: false // when hovering, show the jumping animation
 
     width: size
     height: size * (cellH / cellW)
@@ -117,9 +118,21 @@ Item {
         setState(state)
     }
 
-    // react to external state changes (unless overridden by a drag)
+    // Hover support: while the pointer is over the pet it keeps jumping.
+    function startHover() {
+        hoverOverride = true
+        setAnimation("jumping", true)
+        sprite.loops = Animation.Infinite // keep jumping while hovering
+    }
+
+    function stopHover() {
+        hoverOverride = false
+        setState(state)
+    }
+
+    // react to external state changes (unless overridden by a drag or hover)
     onStateChanged: {
-        if (!dragOverride) {
+        if (!dragOverride && !hoverOverride) {
             setState(state)
         }
     }

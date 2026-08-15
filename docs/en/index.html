@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenCode Assistant for KDE Plasma</title>
-  <meta name="description" content="An AI chat plasmoid for KDE Plasma 6 powered by the opencode CLI, with an animated Tux pet.">
+  <meta name="description"
+    content="An AI chat plasmoid for KDE Plasma 6 powered by the opencode CLI, with an animated Tux pet.">
   <link rel="stylesheet" href="../css/style.css">
 </head>
+
 <body>
   <nav class="nav container">
     <a class="brand" href="../">
@@ -36,20 +39,39 @@
     <div class="install">
       <div class="terminal">
         <span class="prompt">$</span>
-        <span id="cmd">curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash</span>
+        <span id="cmd">curl -fsSL
+          https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash</span>
       </div>
       <button class="copy-btn" onclick="copyCmd()">Copy command</button>
     </div>
-    <p>This command installs <strong>opencode CLI</strong> (if missing), the widget, and its backend, then restarts <code>plasmashell</code>.</p>
+    <p>This command installs <strong>opencode CLI</strong> (if missing), the widget, and its backend, then restarts
+      <code>plasmashell</code>.</p>
   </section>
 
   <section class="container">
     <h2>Features</h2>
     <div class="grid">
-      <div class="card feature"><div class="emoji">🐧</div><h3>Tux pet</h3><p>Animated desktop companion that reacts to chat status, can be dragged around the widget, and shows a red dot when offline.</p></div>
-      <div class="card feature"><div class="emoji">💬</div><h3>Streaming chat</h3><p>Real-time responses with a model picker and file attachments.</p></div>
-      <div class="card feature"><div class="emoji">🗂</div><h3>Multiple sessions</h3><p>Create, switch and delete conversations.</p></div>
-      <div class="card feature"><div class="emoji">⚙️</div><h3>Full settings</h3><p>Personality, user context, per-folder permissions, memories, pet options.</p></div>
+      <div class="card feature">
+        <div class="emoji">🐧</div>
+        <h3>Tux pet</h3>
+        <p>Animated desktop companion that reacts to chat status, walks to where you click, jumps on hover, resizes with
+          the scroll wheel, and shows an error animation when offline.</p>
+      </div>
+      <div class="card feature">
+        <div class="emoji">💬</div>
+        <h3>Streaming chat</h3>
+        <p>Real-time responses with a model picker and file attachments.</p>
+      </div>
+      <div class="card feature">
+        <div class="emoji">🗂</div>
+        <h3>Multiple sessions</h3>
+        <p>Create, switch and delete conversations.</p>
+      </div>
+      <div class="card feature">
+        <div class="emoji">⚙️</div>
+        <h3>Full settings</h3>
+        <p>Personality, user context, per-folder permissions, memories, pet options.</p>
+      </div>
     </div>
   </section>
 
@@ -69,8 +91,11 @@
     <h2>Getting started</h2>
     <div class="card">
       <h3>1. Install</h3>
-      <pre class="code">curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash</pre>
-      <p>The installer downloads the sources from this repository into <code>~/.local/share/opencode-assistant-kde/</code>, installs the plasmoid bundle, and fetches the default <strong>Tux</strong> pet on demand.</p>
+      <pre
+        class="code">curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash</pre>
+      <p>The installer downloads the sources from this repository into
+        <code>~/.local/share/opencode-assistant-kde/</code>, installs the plasmoid bundle, and fetches the default
+        <strong>Tux</strong> pet on demand.</p>
 
       <h3>2. Add the widget</h3>
       <p>Right-click the desktop → <em>Add Widgets…</em> → search for <strong>OpenCode Assistant</strong>.</p>
@@ -106,7 +131,8 @@
 
   <footer class="footer">
     <div class="container">
-      <p>OpenCode Assistant for KDE Plasma — MIT License. <a href="https://github.com/zonaro/opencode-assistant-kde">Source code</a></p>
+      <p>OpenCode Assistant for KDE Plasma — MIT License. <a
+          href="https://github.com/zonaro/opencode-assistant-kde">Source code</a></p>
     </div>
   </footer>
 
@@ -115,8 +141,9 @@
       var el = document.getElementById('cmd');
       if (navigator.clipboard) navigator.clipboard.writeText(el.textContent);
       var b = event.target; b.textContent = 'Copied!';
-      setTimeout(function(){ b.textContent = 'Copy command'; }, 1500);
+      setTimeout(function () { b.textContent = 'Copy command'; }, 1500);
     }
   </script>
 </body>
+
 </html>

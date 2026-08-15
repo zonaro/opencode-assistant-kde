@@ -37,5 +37,11 @@
       <min>32</min>
       <max>256</max>
     </entry>
+    <entry name="petFps" type="Int">
+      <label>Pet animation speed in frames per second.</label>
+      <default>10</default>
+      <min>1</min>
+      <max>30</max>
+    </entry>
   </group>
 </kcfg>
