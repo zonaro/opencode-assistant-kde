@@ -149,7 +149,29 @@ EOF
 fi
 
 # ------------------------------------------------------------
-# 4) Plasmoid (pets are bundled in package/contents/ui/pets/)
+# 4) Ícone do widget (tema hicolor — usado na bandeja de widgets)
+# ------------------------------------------------------------
+ICON_SRC="$SRC_DIR/icons/hicolor"
+ICON_DEST="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+if [ -d "$ICON_SRC" ]; then
+  echo "==> Instalando ícone (opencode-assistant) em $ICON_DEST"
+  # copia scalable/ + <n>x<n>/ preservando a estrutura apps/
+  (cd "$ICON_SRC" && find . -name 'opencode-assistant.*' -type f -print) | while read -r rel; do
+    mkdir -p "$ICON_DEST/$(dirname "$rel")"
+    cp -f "$ICON_SRC/$rel" "$ICON_DEST/$rel"
+  done
+  if need xdg-icon-resource; then
+    xdg-icon-resource forceupdate --theme hicolor >/dev/null 2>&1 || true
+  fi
+  if need gtk-update-icon-cache; then
+    gtk-update-icon-cache -q -t -f "$ICON_DEST" >/dev/null 2>&1 || true
+  fi
+else
+  echo "AVISO: $ICON_SRC não encontrado — o widget usará o ícone padrão" >&2
+fi
+
+# ------------------------------------------------------------
+# 5) Plasmoid (pets are bundled in package/contents/ui/pets/)
 # ------------------------------------------------------------
 if ! need kpackagetool6; then
   echo "ERRO: kpackagetool6 não encontrado. Instale kpackage (parte do KDE Plasma)." >&2

@@ -32,6 +32,23 @@ PlasmoidItem {
     property bool spawnAttempted: false
     property string petState: "idle"
 
+    // ---- popup size ----
+    // The configuration is the single source of truth; a live drag only shadows
+    // it through popupResizing. Never assign chatContent.width/height directly:
+    // that destroys the binding to the configuration, and then neither the
+    // settings dialog nor a later drag can resize the popup again.
+    property bool popupResizing: false
+    property int popupDragW: 0
+    property int popupDragH: 0
+    readonly property int popupW: popupResizing ? popupDragW : Plasmoid.configuration.popupWidth
+    readonly property int popupH: popupResizing ? popupDragH : Plasmoid.configuration.popupHeight
+
+    // resize gesture origin (screen coordinates) and starting size
+    property real resizeOriginX: 0
+    property real resizeOriginY: 0
+    property int resizeStartW: 0
+    property int resizeStartH: 0
+
     // ---- data dir (for logs + pets) — resolved from home (matches install.sh) ----
     // StandardPaths.writableLocation returns a QUrl in QML, so strip the file:// prefix.
     property string dataDir: {
@@ -168,6 +185,48 @@ PlasmoidItem {
         if (!serverAlive && !spawnAttempted) {
             spawnServer()
         }
+    }
+
+    // ---- popup resizing ----
+    // main.xml caps both dimensions at 2000; also keep the popup inside the screen.
+    function clampPopupWidth(w) {
+        const scr = root.screenGeometry
+        const lim = Math.min(2000, scr && scr.width > 0 ? scr.width - 16 : 2000)
+        return Math.round(Math.max(320, Math.min(w, Math.max(320, lim))))
+    }
+
+    function clampPopupHeight(h) {
+        const scr = root.screenGeometry
+        const lim = Math.min(2000, scr && scr.height > 0 ? scr.height - 16 : 2000)
+        return Math.round(Math.max(240, Math.min(h, Math.max(240, lim))))
+    }
+
+    function beginPopupResize(g) {
+        resizeOriginX = g.x
+        resizeOriginY = g.y
+        resizeStartW = popupW
+        resizeStartH = popupH
+        popupDragW = resizeStartW
+        popupDragH = resizeStartH
+        popupResizing = true
+    }
+
+    // The grips are anchored to the edges, so they move while the popup grows —
+    // only screen coordinates give a stable reference for the drag delta.
+    function updatePopupResize(g, horizontal, vertical) {
+        if (!popupResizing) return
+        if (horizontal) popupDragW = clampPopupWidth(resizeStartW + (g.x - resizeOriginX))
+        if (vertical) popupDragH = clampPopupHeight(resizeStartH + (g.y - resizeOriginY))
+    }
+
+    function commitPopupSize() {
+        if (!popupResizing) return
+        // Store first, drop the drag override second: popupW/popupH keep the same
+        // value across the handover, so the popup does not flicker back.
+        Plasmoid.configuration.popupWidth = popupDragW
+        Plasmoid.configuration.popupHeight = popupDragH
+        popupResizing = false
+        positionDialogAtPet()
     }
 
     // Place the chat dialog next to the pet without covering it: above the head
@@ -494,8 +553,8 @@ PlasmoidItem {
 
         mainItem: Item {
             id: chatContent
-            width: Plasmoid.configuration.popupWidth
-            height: Plasmoid.configuration.popupHeight
+            width: root.popupW
+            height: root.popupH
             clip: true
 
             // slim header: title + status + close
@@ -604,47 +663,89 @@ PlasmoidItem {
                 }
             }
 
-            // resize handle (bottom-right corner)
+            // ---- resize grips ----
+            // A Plasma dialog has no window decoration, so the popup carries its
+            // own edges: bottom-right corner, right edge and bottom edge.
+
             MouseArea {
-                id: resizeHandle
+                id: cornerGrip
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                width: 28
-                height: 28
+                width: 20
+                height: 20
+                hoverEnabled: true
                 cursorShape: Qt.SizeFDiagCursor
                 z: 40
 
-                property bool resizing: false
-                property real startW: 0
-                property real startH: 0
-                property real startGX: 0
-                property real startGY: 0
+                onPressed: (mouse) => root.beginPopupResize(mapToGlobal(mouse.x, mouse.y))
+                onPositionChanged: (mouse) => root.updatePopupResize(mapToGlobal(mouse.x, mouse.y), true, true)
+                onReleased: root.commitPopupSize()
+                onCanceled: root.commitPopupSize()
 
-                onPressed: (mouse) => {
-                    resizing = true
-                    startW = chatContent.width
-                    startH = chatContent.height
-                    startGX = mouse.globalX
-                    startGY = mouse.globalY
+                // grip indicator: dots in a triangle, counted from the corner
+                Repeater {
+                    model: [{ c: 0, r: 0 }, { c: 1, r: 0 }, { c: 0, r: 1 },
+                            { c: 2, r: 0 }, { c: 1, r: 1 }, { c: 0, r: 2 }]
+                    Rectangle {
+                        width: 3
+                        height: 3
+                        radius: 1.5
+                        color: cornerGrip.containsMouse || root.popupResizing ? "#cdd6f4" : "#66ffffff"
+                        x: cornerGrip.width - 5 - modelData.c * 5
+                        y: cornerGrip.height - 5 - modelData.r * 5
+                    }
                 }
-                onPositionChanged: (mouse) => {
-                    if (!resizing) return
-                    chatContent.width = Math.max(320, startW + (mouse.globalX - startGX))
-                    chatContent.height = Math.max(240, startH + (mouse.globalY - startGY))
-                }
-                onReleased: {
-                    resizing = false
-                    Plasmoid.configuration.popupWidth = Math.round(chatContent.width)
-                    Plasmoid.configuration.popupHeight = Math.round(chatContent.height)
-                }
+            }
 
-                // grip indicator
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    width: 10
-                    height: 10
-                    color: "#66ffffff"
+            MouseArea {
+                id: rightGrip
+                anchors.right: parent.right
+                anchors.top: headerBar.bottom
+                anchors.bottom: cornerGrip.top
+                width: 6
+                cursorShape: Qt.SizeHorCursor
+                z: 40
+
+                onPressed: (mouse) => root.beginPopupResize(mapToGlobal(mouse.x, mouse.y))
+                onPositionChanged: (mouse) => root.updatePopupResize(mapToGlobal(mouse.x, mouse.y), true, false)
+                onReleased: root.commitPopupSize()
+                onCanceled: root.commitPopupSize()
+            }
+
+            MouseArea {
+                id: bottomGrip
+                anchors.left: parent.left
+                anchors.right: cornerGrip.left
+                anchors.bottom: parent.bottom
+                height: 6
+                cursorShape: Qt.SizeVerCursor
+                z: 40
+
+                onPressed: (mouse) => root.beginPopupResize(mapToGlobal(mouse.x, mouse.y))
+                onPositionChanged: (mouse) => root.updatePopupResize(mapToGlobal(mouse.x, mouse.y), false, true)
+                onReleased: root.commitPopupSize()
+                onCanceled: root.commitPopupSize()
+            }
+
+            // live size readout while dragging an edge
+            Rectangle {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.rightMargin: 22
+                anchors.bottomMargin: 22
+                width: sizeLabel.implicitWidth + 16
+                height: sizeLabel.implicitHeight + 8
+                radius: 4
+                color: "#cc181825"
+                visible: root.popupResizing
+                z: 50
+
+                Text {
+                    id: sizeLabel
+                    anchors.centerIn: parent
+                    text: root.popupW + " × " + root.popupH
+                    color: "#cdd6f4"
+                    font.pixelSize: 12
                 }
             }
         }

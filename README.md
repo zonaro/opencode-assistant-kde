@@ -104,6 +104,7 @@ KDE Plasma 6 (plasmashell)
 - **Server**: `opencode serve --hostname 127.0.0.1 --port <port>` — spawned on-demand by the plasmoid with `env -u` to unset desktop-app leftovers (`OPENCODE_SERVER_PASSWORD`, `OPENCODE_DISABLE_EMBEDDED_WEB_UI`, `OPENCODE_CLIENT`, `XDG_STATE_HOME`).
 - **Pets**: OpenPets format (`pet.json` + `spritesheet.webp`, 8×9 atlas, 192×208 cells). Bundled in `package/contents/ui/pets/` (Tux + Tater).
 - **State polling**: the plasmoid polls `GET /session` every 3 s to detect active sessions and animate the pet accordingly.
+- **Icon**: `icons/hicolor/` holds the widget icon (`opencode-assistant`), a pixel-art Tux derived from the pet spritesheet. `scripts/install.sh` copies it into the user's hicolor theme so the widget explorer can resolve it; regenerate it with `python3 scripts/gen-icon.py`.
 
 ---
 

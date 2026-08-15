@@ -10,6 +10,12 @@ kpackagetool6 --type Plasma/Applet --remove com.opencode.assistant || {
   echo "Plasmoid não estava instalado (ou falha ao remover)."
 }
 
+echo "==> Removendo ícone do tema hicolor"
+ICON_DEST="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+if [ -d "$ICON_DEST" ]; then
+  find "$ICON_DEST" -name 'opencode-assistant.*' -type f -delete 2>/dev/null || true
+fi
+
 echo "==> Tentando parar o servidor opencode (se estiver sendo executado)"
 pkill -f "opencode serve" 2>/dev/null || true
 

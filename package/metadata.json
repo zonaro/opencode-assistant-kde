@@ -3,20 +3,22 @@
     "Id": "com.opencode.assistant",
     "Name": "OpenCode Assistant",
     "Name[pt]": "Assistente OpenCode",
-    "Description": "Chat with AI via the opencode CLI, with an animated pet that opens a web panel on click",
-    "Description[pt]": "Chat com IA via CLI opencode, com pet animado que abre um painel web ao clicar",
-    "Icon": "applications-chat",
+    "Name[pt_BR]": "Assistente OpenCode",
+    "Description": "Animated desktop pet that opens an embedded OpenCode AI panel on click",
+    "Description[pt]": "Pet animado no desktop que abre um painel de IA do OpenCode ao clicar",
+    "Description[pt_BR]": "Pet animado no desktop que abre um painel de IA do OpenCode ao clicar",
+    "Icon": "opencode-assistant",
     "Category": "Utilities",
-    "Version": "0.1",
-    "License": "GPL-2.0+",
-    "Website": "https://opencode.ai",
-    "Depends": "plasma-desktop"
+    "Version": "0.1.0",
+    "License": "MIT",
+    "Website": "https://github.com/zonaro/opencode-assistant-kde",
+    "BugReportUrl": "https://github.com/zonaro/opencode-assistant-kde/issues",
+    "Authors": [
+      {
+        "Name": "Kaizonaro"
+      }
+    ]
   },
   "KPackageStructure": "Plasma/Applet",
-  "X-Plasma-API-Minimum-Version": "6.0",
-  "X-Plasma-Provides": [
-    "org.kde.plasma.multiplexer"
-  ],
-  "X-Plasma-NotificationArea": "true",
-  "X-Plasma-StandAloneApp": "true"
+  "X-Plasma-API-Minimum-Version": "6.0"
 }
