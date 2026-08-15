@@ -163,7 +163,7 @@ PlasmoidItem {
             id: webView
             anchors.fill: parent
             url: root.backendAlive ? `${root.backendUrl}/` : "about:blank"
-            onComponentCompleted: {
+            Component.onCompleted: {
                 backgroundColor = "#1e1e2e"
             }
         }
