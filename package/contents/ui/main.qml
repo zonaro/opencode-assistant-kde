@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtWebEngine
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasma5support as Plasma5Support
 import org.kde.plasma.plasmoid
 
 PlasmoidItem {
@@ -19,7 +20,7 @@ PlasmoidItem {
     property bool spawnAttempted: false
 
     // ---------- backend: spawn + health ----------
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: execSource
         engine: "executable"
         connectedSources: []
@@ -28,7 +29,7 @@ PlasmoidItem {
         }
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: healthSource
         engine: "http"
         connectedSources: []
