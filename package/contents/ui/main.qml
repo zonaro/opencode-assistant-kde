@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import QtWebEngine
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
