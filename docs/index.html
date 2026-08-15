@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenCode Assistant for KDE Plasma</title>
+  <meta name="description" content="An AI chat plasmoid for KDE Plasma 6 powered by the opencode CLI, with an animated Tux pet.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <script>
+    // Language detection & redirect (i18n: pt, en, es)
+    (function () {
+      var base = document.baseURI.replace(/index\.html?$/, '');
+      var langs = ['pt', 'en', 'es'];
+      var path = window.location.pathname;
+      for (var i = 0; i < langs.length; i++) {
+        if (path.indexOf('/' + langs[i] + '/') !== -1) { return; } // already on a lang page
+      }
+      var nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+      var lang = 'en';
+      if (nav.indexOf('pt') === 0) lang = 'pt';
+      else if (nav.indexOf('es') === 0) lang = 'es';
+      var url = base.replace(/\/$/, '') + '/' + lang + '/';
+      window.location.replace(url);
+    })();
+  </script>
+  <noscript>
+    <p>Choose your language: <a href="pt/">Português</a> · <a href="en/">English</a> · <a href="es/">Español</a></p>
+  </noscript>
+  <div class="container" style="text-align:center;padding-top:80px;">
+    <button class="copy-btn" style="display:none;"></button>
+  </div>
+</body>
+</html>

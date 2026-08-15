@@ -1,0 +1,23 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Backend runtime data (user-generated)
+/backend/config/
+*.log
+
+# Pet downloads (fetched on demand)
+webui/pets/*/
+!webui/pets/tater/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# GitHub Pages
+docs/.jekyll-cache/

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="port" type="Int">
+      <label>The local port the assistant backend listens on.</label>
+      <default>3171</default>
+      <min>1024</min>
+      <max>65535</max>
+    </entry>
+    <entry name="avatar" type="String">
+      <label>Path to the user avatar image (shown as the widget icon). Empty uses the default.</label>
+      <default></default>
+    </entry>
+    <entry name="avatarSize" type="Int">
+      <label>Avatar size in pixels (desktop mode).</label>
+      <default>48</default>
+      <min>32</min>
+      <max>256</max>
+    </entry>
+    <entry name="popupWidth" type="Int">
+      <label>Popup chat width in pixels.</label>
+      <default>760</default>
+      <min>320</min>
+      <max>2000</max>
+    </entry>
+    <entry name="popupHeight" type="Int">
+      <label>Popup chat height in pixels.</label>
+      <default>600</default>
+      <min>240</min>
+      <max>2000</max>
+    </entry>
+    <entry name="petId" type="String">
+      <label>Identifier of the pet shown in the chat.</label>
+      <default>tux</default>
+    </entry>
+  </group>
+</kcfg>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenCode Assistant for KDE Plasma</title>
+  <meta name="description" content="An AI chat plasmoid for KDE Plasma 6 powered by the opencode CLI, with an animated Tux pet.">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <nav class="nav container">
+    <a class="brand" href="../">
+      <img src="../images/cover.png" alt="Tux">
+      OpenCode Assistant
+    </a>
+    <div class="lang-switch">
+      <a class="lang-link" href="../pt/">PT</a>
+      <a class="lang-link active" href="../en/">EN</a>
+      <a class="lang-link" href="../es/">ES</a>
+    </div>
+  </nav>
+
+  <header class="hero container">
+    <img class="cover" src="../images/cover.png" alt="Tux the default pet">
+    <h1>OpenCode Assistant</h1>
+    <p>An AI chat widget for KDE Plasma 6, powered by the opencode CLI, with an animated Tux pet.</p>
+    <div class="badges">
+      <span class="badge">KDE Plasma 6</span>
+      <span class="badge">QtWebEngine</span>
+      <span class="badge">opencode CLI</span>
+      <span class="badge">MIT License</span>
+    </div>
+  </header>
+
+  <section class="container">
+    <div class="install">
+      <div class="terminal">
+        <span class="prompt">$</span>
+        <span id="cmd">curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash</span>
+      </div>
+      <button class="copy-btn" onclick="copyCmd()">Copy command</button>
+    </div>
+    <p>This command installs <strong>opencode CLI</strong> (if missing), the widget, and its backend, then restarts <code>plasmashell</code>.</p>
+  </section>
+
+  <section class="container">
+    <h2>Features</h2>
+    <div class="grid">
+      <div class="card feature"><div class="emoji">🐧</div><h3>Tux pet</h3><p>Animated desktop companion that reacts to chat status.</p></div>
+      <div class="card feature"><div class="emoji">💬</div><h3>Streaming chat</h3><p>Real-time responses with a model picker and file attachments.</p></div>
+      <div class="card feature"><div class="emoji">🗂</div><h3>Multiple sessions</h3><p>Create, switch and delete conversations.</p></div>
+      <div class="card feature"><div class="emoji">⚙️</div><h3>Full settings</h3><p>Personality, user context, per-folder permissions, memories, pet options.</p></div>
+    </div>
+  </section>
+
+  <section class="container">
+    <h2>Requirements</h2>
+    <div class="card">
+      <ul>
+        <li><strong>KDE Plasma 6</strong> (Qt 6) with <strong>QtWebEngine</strong></li>
+        <li><strong>Node.js ≥ 20</strong></li>
+        <li><strong>curl</strong></li>
+        <li><code>kpackagetool6</code> (from the <code>kpackage</code> package, shipped with Plasma 6)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="container">
+    <h2>Getting started</h2>
+    <div class="card">
+      <h3>1. Install</h3>
+      <pre class="code">curl -fsSL https://raw.githubusercontent.com/zonaro/opencode-assistant-kde/main/scripts/install.sh | bash</pre>
+      <p>The installer downloads the sources from this repository into <code>~/.local/share/opencode-assistant-kde/</code>, installs the plasmoid bundle, and fetches the default <strong>Tux</strong> pet on demand.</p>
+
+      <h3>2. Add the widget</h3>
+      <p>Right-click the desktop → <em>Add Widgets…</em> → search for <strong>OpenCode Assistant</strong>.</p>
+
+      <h3>3. Log in to opencode</h3>
+      <p>In a terminal:</p>
+      <pre class="code">opencode auth login</pre>
+      <p>You will be able to pick your provider and model inside the widget.</p>
+    </div>
+  </section>
+
+  <section class="container">
+    <h2>Manual install</h2>
+    <div class="card">
+      <p>From a checkout of this repository:</p>
+      <pre class="code">./scripts/install.sh</pre>
+      <p>Or install just the plasmoid bundle:</p>
+      <pre class="code">kpackagetool6 --type Plasma/Applet --install package</pre>
+    </div>
+  </section>
+
+  <section class="container">
+    <h2>Development</h2>
+    <div class="card">
+      <p>Run the backend locally (serves the UI at <code>http://127.0.0.1:3171/</code>):</p>
+      <pre class="code">node backend/index.js</pre>
+      <p>Run all checks:</p>
+      <pre class="code">./scripts/test.sh</pre>
+      <p>Preview the widget without installing it:</p>
+      <pre class="code">plasmoidviewer -a package -l floating -f planar</pre>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>OpenCode Assistant for KDE Plasma — MIT License. <a href="https://github.com/zonaro/opencode-assistant-kde">Source code</a></p>
+    </div>
+  </footer>
+
+  <script>
+    function copyCmd() {
+      var el = document.getElementById('cmd');
+      if (navigator.clipboard) navigator.clipboard.writeText(el.textContent);
+      var b = event.target; b.textContent = 'Copied!';
+      setTimeout(function(){ b.textContent = 'Copy command'; }, 1500);
+    }
+  </script>
+</body>
+</html>
