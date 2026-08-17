@@ -11,6 +11,8 @@ KCM.SimpleKCM {
 
     property alias cfg_port: spinPort.value
     property alias cfg_hostname: textHostname.text
+    property alias cfg_username: textUsername.text
+    property alias cfg_password: textPassword.text
     property alias cfg_popupWidth: spinPopupWidth.value
     property alias cfg_popupHeight: spinPopupHeight.value
     property alias cfg_petId: page.selectedPet
@@ -91,6 +93,26 @@ KCM.SimpleKCM {
                 id: textHostname
                 Layout.fillWidth: true
                 placeholderText: i18n("127.0.0.1")
+            }
+        }
+
+        RowLayout {
+            Kirigami.FormData.label: i18n("Usuário do OpenCode:")
+
+            QQC2.TextField {
+                id: textUsername
+                Layout.fillWidth: true
+                placeholderText: i18n("opencode")
+            }
+        }
+
+        RowLayout {
+            Kirigami.FormData.label: i18n("Senha do OpenCode:")
+
+            QQC2.PasswordField {
+                id: textPassword
+                Layout.fillWidth: true
+                placeholderText: i18n("Opcional")
             }
         }
 

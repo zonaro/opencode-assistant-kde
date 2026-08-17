@@ -25,6 +25,8 @@ PlasmoidItem {
     // ---- config ----
     readonly property string serverHost: Plasmoid.configuration.hostname
     readonly property int serverPort: Plasmoid.configuration.port
+    readonly property string serverUsername: Plasmoid.configuration.username
+    readonly property string serverPassword: Plasmoid.configuration.password
     readonly property string serverUrl: `http://${serverHost}:${serverPort}`
 
     // ---- runtime state ----
@@ -142,23 +144,35 @@ PlasmoidItem {
         const home = homeDir()
         const port = Plasmoid.configuration.port
         const host = Plasmoid.configuration.hostname
+        const username = Plasmoid.configuration.username
+        const password = Plasmoid.configuration.password
         const logPath = dataDir + "/opencode-web.log"
         const bin = opencodeBin()
 
         // Clean environment: unset desktop-app leftovers that force auth / disable web UI
-        const cmd = `BIN="${bin}"; [ -x "$BIN" ] || BIN="${home}/.local/bin/opencode"; [ -x "$BIN" ] || BIN="$(command -v opencode || echo opencode)"; env -u OPENCODE_SERVER_PASSWORD -u OPENCODE_SERVER_USERNAME -u OPENCODE_DISABLE_EMBEDDED_WEB_UI -u OPENCODE_CLIENT -u XDG_STATE_HOME setsid nohup "$BIN" serve --hostname ${host} --port ${port} > "${logPath}" 2>&1 &`
+        // Then set username/password if provided
+        let envCmd = `env -u OPENCODE_DISABLE_EMBEDDED_WEB_UI -u OPENCODE_CLIENT -u XDG_STATE_HOME`
+        if (username && username !== "opencode") {
+            envCmd += ` OPENCODE_SERVER_USERNAME="${username}"`
+        }
+        if (password && password !== "") {
+            envCmd += ` OPENCODE_SERVER_PASSWORD="${password}"`
+        }
+        const cmd = `BIN="${bin}"; [ -x "$BIN" ] || BIN="${home}/.local/bin/opencode"; [ -x "$BIN" ] || BIN="$(command -v opencode || echo opencode)"; ${envCmd} setsid nohup "$BIN" serve --hostname ${host} --port ${port} > "${logPath}" 2>&1 &`
         execSource.connectSource(cmd)
         console.log("[assistant] spawn:", cmd)
     }
 
     function pollHealth() {
-        const cmd = `curl -s -o /dev/null -w "%{http_code}" --max-time 2 "${serverUrl}/"`
+        const auth = (serverUsername && serverPassword) ? `-u "${serverUsername}:${serverPassword}" ` : ""
+        const cmd = `curl -s -o /dev/null -w "%{http_code}" --max-time 2 ${auth}"${serverUrl}/"`
         healthSource.connectSource(cmd)
     }
 
     function pollState() {
         if (!serverAlive) return
-        const cmd = `curl -s --max-time 2 "${serverUrl}/session"`
+        const auth = (serverUsername && serverPassword) ? `-u "${serverUsername}:${serverPassword}" ` : ""
+        const cmd = `curl -s --max-time 2 ${auth}"${serverUrl}/session"`
         stateSource.connectSource(cmd)
     }
 

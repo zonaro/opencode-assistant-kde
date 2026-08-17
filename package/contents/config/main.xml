@@ -43,5 +43,13 @@
       <min>1</min>
       <max>30</max>
     </entry>
+    <entry name="username" type="String">
+      <label>Username for HTTP basic auth (opencode server).</label>
+      <default>opencode</default>
+    </entry>
+    <entry name="password" type="String">
+      <label>Password for HTTP basic auth (opencode server).</label>
+      <default></default>
+    </entry>
   </group>
 </kcfg>
