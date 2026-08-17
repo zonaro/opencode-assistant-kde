@@ -109,10 +109,11 @@ KCM.SimpleKCM {
         RowLayout {
             Kirigami.FormData.label: i18n("Senha do OpenCode:")
 
-            QQC2.PasswordField {
+            QQC2.TextField {
                 id: textPassword
                 Layout.fillWidth: true
                 placeholderText: i18n("Opcional")
+                echoMode: QQC2.TextField.Password
             }
         }
 
